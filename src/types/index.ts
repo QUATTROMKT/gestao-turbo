@@ -119,6 +119,7 @@ export interface PipelineDeal {
     company_name: string;
     contact_name: string;
     email?: string;
+    phone?: string;
     value: number;
     stage: 'lead' | 'proposal' | 'negotiation' | 'closed_won' | 'closed_lost';
     probability: number;

@@ -22,6 +22,7 @@ export function Pipeline() {
     const [newContactName, setNewContactName] = useState('');
     const [newValue, setNewValue] = useState('');
     const [newEmail, setNewEmail] = useState('');
+    const [newPhone, setNewPhone] = useState('');
 
     useEffect(() => {
         fetchDeals();
@@ -51,6 +52,7 @@ export function Pipeline() {
                 company_name: newCompanyName,
                 contact_name: newContactName,
                 email: newEmail,
+                phone: newPhone,
                 value: parseFloat(newValue) || 0,
                 stage: 'lead',
                 probability: 20,
@@ -73,6 +75,7 @@ export function Pipeline() {
         setNewContactName('');
         setNewValue('');
         setNewEmail('');
+        setNewPhone('');
     };
 
     const getStageTotal = (stage: string) => {
@@ -153,6 +156,7 @@ export function Pipeline() {
                     <Input placeholder="Nome da Empresa *" value={newCompanyName} onChange={e => setNewCompanyName(e.target.value)} />
                     <Input placeholder="Nome do Contato *" value={newContactName} onChange={e => setNewContactName(e.target.value)} />
                     <Input placeholder="Email" value={newEmail} onChange={e => setNewEmail(e.target.value)} />
+                    <Input placeholder="Telefone" value={newPhone} onChange={e => setNewPhone(e.target.value)} />
                     <Input placeholder="Valor Estimado (R$)" type="number" value={newValue} onChange={e => setNewValue(e.target.value)} />
                     <Button className="w-full" onClick={handleCreateDeal} disabled={!newCompanyName || !newContactName}>
                         Criar Deal
