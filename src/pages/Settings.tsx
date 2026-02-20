@@ -38,9 +38,31 @@ export function Settings() {
 
     // Initial Load (Mock load from localStorage or DB would be here)
     useEffect(() => {
-        // In a real app, we'd fetch these from the 'integrations' table via the Services
-        // MetaService.getCredentials().then(...)
+        loadCredentials();
     }, []);
+
+    const loadCredentials = async () => {
+        const meta = await MetaService.getCredentials();
+        if (meta?.credentials) {
+            setMetaToken(meta.credentials.access_token);
+            setMetaAccountId(meta.credentials.ad_account_id);
+        }
+
+        const drive = await GoogleDriveService.getCredentials();
+        if (drive?.credentials) {
+            setDriveClientId(drive.credentials.client_id);
+        }
+
+        const notion = await NotionService.getCredentials();
+        if (notion?.credentials) {
+            setNotionToken(notion.credentials.token);
+        }
+
+        const clickup = await ClickUpService.getCredentials();
+        if (clickup?.credentials) {
+            setClickupToken(clickup.credentials.token);
+        }
+    };
 
     const toggleTheme = (newTheme: string) => {
         setTheme(newTheme);
