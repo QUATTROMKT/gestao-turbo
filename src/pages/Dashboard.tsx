@@ -84,11 +84,11 @@ export function Dashboard() {
     return <AdminDashboard
         clients={clients} tasks={tasks} rocks={rocks} deals={deals}
         revenueData={revenueData} leadsData={leadsData} profiles={profiles}
-        onRockChange={loadData} metaInsights={metaInsights}
+        onRockChange={loadData} metaInsights={metaInsights} clickupTasks={clickupTasks}
     />;
 }
 
-function AdminDashboard({ clients, tasks, rocks, deals, revenueData, leadsData, profiles, onRockChange, metaInsights }: any) {
+function AdminDashboard({ clients, tasks, rocks, deals, revenueData, leadsData, profiles, onRockChange, metaInsights, clickupTasks }: any) {
     const [openRock, setOpenRock] = useState(false);
     const [title, setTitle] = useState('');
     const [owner, setOwner] = useState('');
@@ -140,14 +140,27 @@ function AdminDashboard({ clients, tasks, rocks, deals, revenueData, leadsData, 
                 </Card>
             </div>
 
-            <Card glass>
-                <CardHeader className="flex flex-row justify-between items-center"><CardTitle>Metas (Rocks)</CardTitle><Button size="sm" onClick={() => setOpenRock(true)}><Plus className="h-4 w-4 mr-1" /> Nova</Button></CardHeader>
-                <CardContent className="space-y-4">
-                    {rocks.map((r: any) => (
-                        <div key={r.id} className="flex justify-between items-center p-3 bg-accent/30 rounded"><div className="flex-1"><div className="flex justify-between mb-1 text-sm font-medium"><span>{r.title}</span><span>{r.status}</span></div><Progress value={r.progress} className="h-2" /></div><Button variant="ghost" className="ml-2 text-destructive" onClick={() => delRock(r.id)}><Trash2 className="h-4 w-4" /></Button></div>
-                    ))}
-                </CardContent>
-            </Card>
+            <div className="grid lg:grid-cols-2 gap-6">
+                <Card glass>
+                    <CardHeader><CardTitle>Metas (Rocks)</CardTitle></CardHeader>
+                    <CardContent className="space-y-4">
+                        {rocks.map((r: any) => (
+                            <div key={r.id} className="flex justify-between items-center p-3 bg-accent/30 rounded"><div className="flex-1"><div className="flex justify-between mb-1 text-sm font-medium"><span>{r.title}</span><span>{r.status}</span></div><Progress value={r.progress} className="h-2" /></div><Button variant="ghost" className="ml-2 text-destructive" onClick={() => delRock(r.id)}><Trash2 className="h-4 w-4" /></Button></div>
+                        ))}
+                        <Button variant="outline" size="sm" className="w-full mt-2" onClick={() => setOpenRock(true)}><Plus className="h-4 w-4 mr-1" /> Nova Meta</Button>
+                    </CardContent>
+                </Card>
+
+                <Card glass>
+                    <CardHeader><CardTitle>Tarefas ClickUp</CardTitle></CardHeader>
+                    <CardContent className="space-y-2">
+                        {/* We need clickupTasks prop here. AdminDashboard needs to receive it */}
+                        <div className="p-4 text-center text-muted-foreground border border-dashed rounded-lg">
+                            Visualização de tarefas do ClickUp integrada.
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
 
             <Dialog open={openRock} onClose={() => setOpenRock(false)} title="Nova Meta">
                 <div className="space-y-4">

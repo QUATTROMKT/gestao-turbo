@@ -141,35 +141,12 @@ export function Reports() {
                         <CardTitle>Tendência de Investimento vs Leads</CardTitle>
                     </CardHeader>
                     <CardContent className="pl-2">
-                        <div className="h-[300px] w-full">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={[
-                                    { name: 'Semana 1', spend: 400, leads: 12 },
-                                    { name: 'Semana 2', spend: 300, leads: 8 },
-                                    { name: 'Semana 3', spend: 550, leads: 18 },
-                                    { name: 'Semana 4', spend: 450, leads: 15 },
-                                ]}>
-                                    <defs>
-                                        <linearGradient id="colorSpend" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
-                                            <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
-                                        </linearGradient>
-                                        <linearGradient id="colorLeads" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                                            <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                                        </linearGradient>
-                                    </defs>
-                                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
-                                    <XAxis dataKey="name" className="text-xs text-muted-foreground" axisLine={false} tickLine={false} />
-                                    <YAxis className="text-xs text-muted-foreground" axisLine={false} tickLine={false} tickFormatter={(value) => `R$${value}`} />
-                                    <Tooltip
-                                        contentStyle={{ backgroundColor: 'rgba(23, 23, 23, 0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
-                                        itemStyle={{ color: '#fff' }}
-                                    />
-                                    <Area type="monotone" dataKey="spend" stroke="#8b5cf6" fillOpacity={1} fill="url(#colorSpend)" name="Investimento" />
-                                    <Area type="monotone" dataKey="leads" stroke="#10b981" fillOpacity={1} fill="url(#colorLeads)" name="Leads" />
-                                </AreaChart>
-                            </ResponsiveContainer>
+                        <div className="h-[300px] w-full flex items-center justify-center text-muted-foreground border border-dashed rounded-xl">
+                            {insights ? (
+                                <p>Gráfico indisponível (API do Meta limitada a dados agregados por enquanto).</p>
+                            ) : (
+                                <p>Conecte o Meta Ads em Configurações para ver dados.</p>
+                            )}
                         </div>
                     </CardContent>
                 </Card>
@@ -181,26 +158,10 @@ export function Reports() {
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-4">
-                            {[
-                                { name: 'Institucional - Branding', spend: 450, roas: 3.2 },
-                                { name: 'Promoção Black Friday', spend: 320, roas: 5.1 },
-                                { name: 'Captação Leads - Ebook', spend: 280, roas: 2.8 },
-                                { name: 'Retargeting Website', spend: 120, roas: 4.5 },
-                            ].map((campaign, i) => (
-                                <div key={i} className="flex items-center justify-between">
-                                    <div className="space-y-1">
-                                        <p className="text-sm font-medium leading-none">{campaign.name}</p>
-                                        <div className="flex items-center text-xs text-muted-foreground">
-                                            <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 mr-2" />
-                                            Ativa
-                                        </div>
-                                    </div>
-                                    <div className="text-right">
-                                        <div className="text-sm font-bold">R$ {campaign.spend}</div>
-                                        <div className="text-xs text-muted-foreground">ROAS: {campaign.roas}x</div>
-                                    </div>
-                                </div>
-                            ))}
+                            {/* Placeholder for future campaign breakdown */}
+                            <div className="p-4 text-center text-muted-foreground border border-dashed rounded-lg">
+                                Listagem de campanhas em desenvolvimento.
+                            </div>
                         </div>
                     </CardContent>
                 </Card>
