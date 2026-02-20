@@ -283,10 +283,11 @@ export function Progress({
     variant = 'primary',
     size = 'md',
     showLabel,
-}: ProgressProps) {
+    className,
+}: ProgressProps & { className?: string }) {
     const pct = Math.min((value / max) * 100, 100);
     return (
-        <div className="flex items-center gap-2">
+        <div className={cn("flex items-center gap-2", className)}>
             <div
                 className={cn(
                     'flex-1 overflow-hidden rounded-full bg-accent',

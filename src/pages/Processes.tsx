@@ -12,6 +12,8 @@ import {
     FileText,
     Eye,
     X,
+    Settings,
+    ExternalLink
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, Button, Input, Badge, Dialog, Textarea, Select, EmptyState, Tabs } from '@/components/ui';
 import { cn } from '@/lib/utils';
@@ -20,10 +22,11 @@ import { useAuth } from '@/context/AuthContext';
 import type { SOP, ParaCategory } from '@/types';
 
 const PARA_TABS = [
-    { id: 'projects' as const, label: 'Projetos', icon: FolderOpen },
-    { id: 'areas' as const, label: 'Áreas', icon: Layers },
-    { id: 'resources' as const, label: 'Recursos', icon: Folder },
-    { id: 'archive' as const, label: 'Arquivo', icon: Archive },
+    { id: 'projects' as ParaCategory, label: 'Projetos', icon: FolderOpen },
+    { id: 'areas' as ParaCategory, label: 'Áreas', icon: Layers },
+    { id: 'resources' as ParaCategory, label: 'Recursos', icon: Folder },
+    { id: 'archive' as ParaCategory, label: 'Arquivo', icon: Archive },
+    { id: 'wiki' as ParaCategory, label: 'Wiki (Notion)', icon: BookOpen },
 ];
 
 export function Processes() {
@@ -36,6 +39,11 @@ export function Processes() {
     const [viewingSop, setViewingSop] = useState<SOP | null>(null);
     const [editingSop, setEditingSop] = useState<SOP | null>(null);
 
+    // Wiki State
+    const [wikiUrl, setWikiUrl] = useState<string | null>(null);
+    const [showWikiConfig, setShowWikiConfig] = useState(false);
+    const [newWikiUrl, setNewWikiUrl] = useState('');
+
     // Form state
     const [formTitle, setFormTitle] = useState('');
     const [formContent, setFormContent] = useState('');
@@ -44,6 +52,7 @@ export function Processes() {
 
     useEffect(() => {
         loadSops();
+        loadWikiConfig();
     }, []);
 
     const loadSops = async () => {
@@ -58,6 +67,27 @@ export function Processes() {
             console.error('Error loading SOPs:', err);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const loadWikiConfig = async () => {
+        const { data } = await supabase.from('integrations').select('*').eq('provider', 'notion').single();
+        if (data?.credentials?.url) {
+            setWikiUrl(data.credentials.url);
+        }
+    };
+
+    const saveWikiConfig = async () => {
+        if (!newWikiUrl) return;
+        const { error } = await supabase.from('integrations').upsert({
+            provider: 'notion',
+            credentials: { url: newWikiUrl },
+            status: 'active'
+        }, { onConflict: 'provider' });
+
+        if (!error) {
+            setWikiUrl(newWikiUrl);
+            setShowWikiConfig(false);
         }
     };
 
@@ -129,7 +159,7 @@ export function Processes() {
     const tabsWithCount = PARA_TABS.map((tab) => ({
         id: tab.id,
         label: tab.label,
-        count: sops.filter((s) => s.category === tab.id).length,
+        count: tab.id === 'wiki' ? (wikiUrl ? 1 : 0) : sops.filter((s) => s.category === tab.id).length,
     }));
 
     return (
@@ -139,25 +169,21 @@ export function Processes() {
                 <div>
                     <h1 className="text-2xl font-bold text-foreground">Biblioteca de Processos</h1>
                     <p className="text-sm text-muted-foreground mt-1">
-                        Cérebro da agência — Método PARA
+                        Cérebro da agência — Método PARA + Wiki
                     </p>
                 </div>
-                <Button onClick={() => { resetForm(); setEditingSop(null); setShowEditor(true); }}>
-                    <Plus className="h-4 w-4" />
-                    Novo Manual
-                </Button>
-            </div>
-
-            {/* Search */}
-            <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <input
-                    type="text"
-                    placeholder="Buscar em todos os manuais, SOPs e documentos..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="h-11 w-full rounded-xl border border-input bg-background pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                />
+                <div className="flex gap-2">
+                    {activeTab === 'wiki' && (
+                        <Button variant="outline" onClick={() => setShowWikiConfig(true)}>
+                            <Settings className="h-4 w-4 mr-2" />
+                            Configurar Notion
+                        </Button>
+                    )}
+                    <Button onClick={() => { resetForm(); setEditingSop(null); setShowEditor(true); }}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Novo Manual
+                    </Button>
+                </div>
             </div>
 
             {/* PARA Tabs */}
@@ -166,6 +192,20 @@ export function Processes() {
                 active={activeTab}
                 onChange={(id) => setActiveTab(id as ParaCategory)}
             />
+
+            {/* Search (only for SOPs) */}
+            {activeTab !== 'wiki' && (
+                <div className="relative">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <input
+                        type="text"
+                        placeholder="Buscar em todos os manuais, SOPs e documentos..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="h-11 w-full rounded-xl border border-input bg-background pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    />
+                </div>
+            )}
 
             {/* Category Description */}
             <div className="rounded-xl bg-accent/30 p-4">
@@ -183,93 +223,141 @@ export function Processes() {
                     {activeTab === 'areas' && 'Responsabilidades contínuas sem prazo final. Ex: "Gestão de tráfego", "Atendimento ao cliente".'}
                     {activeTab === 'resources' && 'Materiais de referência e templates reutilizáveis. Ex: "Templates de copy", "Checklist de auditoria".'}
                     {activeTab === 'archive' && 'Processos inativos mantidos para consulta futura.'}
+                    {activeTab === 'wiki' && 'Central de conhecimento da empresa (Notion).'}
                 </p>
             </div>
 
-            {/* SOPs Grid */}
-            {filteredSops.length === 0 ? (
-                <EmptyState
-                    icon={BookOpen}
-                    title="Nenhum manual encontrado"
-                    description={
-                        searchQuery
-                            ? 'Tente buscar com outros termos'
-                            : `Crie o primeiro manual na categoria "${PARA_TABS.find((t) => t.id === activeTab)?.label}"`
-                    }
-                    action={
-                        !searchQuery && (
-                            <Button
-                                variant="outline"
-                                onClick={() => {
-                                    resetForm();
-                                    setFormCategory(activeTab);
-                                    setEditingSop(null);
-                                    setShowEditor(true);
-                                }}
-                            >
-                                <Plus className="h-4 w-4" />
-                                Criar Manual
-                            </Button>
-                        )
-                    }
-                />
-            ) : (
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {filteredSops.map((sop) => (
-                        <Card
-                            key={sop.id}
-                            glass
-                            hover
-                            className="group cursor-pointer"
-                            onClick={() => setViewingSop(sop)}
-                        >
-                            <div className="flex items-start justify-between">
-                                <div className="flex items-start gap-3 flex-1 min-w-0">
-                                    <div className="rounded-lg bg-primary/10 p-2">
-                                        <FileText className="h-4 w-4 text-primary" />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <h3 className="text-sm font-semibold text-foreground truncate">
-                                            {sop.title}
-                                        </h3>
-                                        <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                                            {sop.content.replace(/[#*_`]/g, '').slice(0, 100)}...
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="flex items-center gap-2 mt-3 flex-wrap">
-                                {sop.tags?.slice(0, 3).map((tag) => (
-                                    <Badge key={tag} variant="outline" className="text-[10px]">
-                                        {tag}
-                                    </Badge>
-                                ))}
-                            </div>
-
-                            <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/30">
-                                <span className="text-[10px] text-muted-foreground">
-                                    {new Date(sop.updated_at).toLocaleDateString('pt-BR')}
-                                </span>
-                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); startEdit(sop); }}
-                                        className="rounded-lg p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
-                                    >
-                                        <Edit3 className="h-3.5 w-3.5" />
-                                    </button>
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); deleteSop(sop.id); }}
-                                        className="rounded-lg p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                                    >
-                                        <Trash2 className="h-3.5 w-3.5" />
-                                    </button>
-                                </div>
-                            </div>
-                        </Card>
-                    ))}
+            {/* Main Content */}
+            {activeTab === 'wiki' ? (
+                // Wiki View
+                <div className="h-[600px] w-full rounded-xl border border-border/50 bg-card overflow-hidden">
+                    {wikiUrl ? (
+                        <iframe
+                            src={wikiUrl}
+                            className="w-full h-full border-0"
+                            title="Notion Wiki"
+                        />
+                    ) : (
+                        <EmptyState
+                            icon={BookOpen}
+                            title="Wiki não configurada"
+                            description="Conecte seu Notion para exibir a documentação da empresa aqui."
+                            action={
+                                <Button onClick={() => setShowWikiConfig(true)}>
+                                    <Settings className="h-4 w-4 mr-2" />
+                                    Configurar URL do Notion
+                                </Button>
+                            }
+                        />
+                    )}
                 </div>
+            ) : (
+                // SOP Grid
+                <>
+                    {filteredSops.length === 0 ? (
+                        <EmptyState
+                            icon={BookOpen}
+                            title="Nenhum manual encontrado"
+                            description={
+                                searchQuery
+                                    ? 'Tente buscar com outros termos'
+                                    : `Crie o primeiro manual na categoria "${PARA_TABS.find((t) => t.id === activeTab)?.label}"`
+                            }
+                            action={
+                                !searchQuery && (
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => {
+                                            resetForm();
+                                            setFormCategory(activeTab);
+                                            setEditingSop(null);
+                                            setShowEditor(true);
+                                        }}
+                                    >
+                                        <Plus className="h-4 w-4" />
+                                        Criar Manual
+                                    </Button>
+                                )
+                            }
+                        />
+                    ) : (
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                            {filteredSops.map((sop) => (
+                                <Card
+                                    key={sop.id}
+                                    glass
+                                    hover
+                                    className="group cursor-pointer"
+                                    onClick={() => setViewingSop(sop)}
+                                >
+                                    <div className="flex items-start justify-between">
+                                        <div className="flex items-start gap-3 flex-1 min-w-0">
+                                            <div className="rounded-lg bg-primary/10 p-2">
+                                                <FileText className="h-4 w-4 text-primary" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <h3 className="text-sm font-semibold text-foreground truncate">
+                                                    {sop.title}
+                                                </h3>
+                                                <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                                                    {sop.content.replace(/[#*_`]/g, '').slice(0, 100)}...
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-2 mt-3 flex-wrap">
+                                        {sop.tags?.slice(0, 3).map((tag) => (
+                                            <Badge key={tag} variant="outline" className="text-[10px]">
+                                                {tag}
+                                            </Badge>
+                                        ))}
+                                    </div>
+
+                                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/30">
+                                        <span className="text-[10px] text-muted-foreground">
+                                            {new Date(sop.updated_at).toLocaleDateString('pt-BR')}
+                                        </span>
+                                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); startEdit(sop); }}
+                                                className="rounded-lg p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+                                            >
+                                                <Edit3 className="h-3.5 w-3.5" />
+                                            </button>
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); deleteSop(sop.id); }}
+                                                className="rounded-lg p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                                            >
+                                                <Trash2 className="h-3.5 w-3.5" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </Card>
+                            ))}
+                        </div>
+                    )}
+                </>
             )}
+
+            {/* Wiki Config Dialog */}
+            <Dialog
+                open={showWikiConfig}
+                onClose={() => setShowWikiConfig(false)}
+                title="Configurar Wiki (Notion)"
+            >
+                <div className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                        Insira a URL pública da sua página do Notion (Publique como site).
+                    </p>
+                    <Input
+                        placeholder="https://notion.site/..."
+                        value={newWikiUrl}
+                        onChange={e => setNewWikiUrl(e.target.value)}
+                    />
+                    <Button className="w-full" onClick={saveWikiConfig}>Salvar Integração</Button>
+                </div>
+            </Dialog>
 
             {/* View SOP Dialog */}
             <Dialog
@@ -333,7 +421,7 @@ export function Processes() {
                         <Select
                             id="sop-category"
                             label="Categoria PARA"
-                            options={PARA_TABS.map((t) => ({ value: t.id, label: t.label }))}
+                            options={PARA_TABS.filter(t => t.id !== 'wiki').map((t) => ({ value: t.id, label: t.label }))}
                             value={formCategory}
                             onChange={(e) => setFormCategory(e.target.value as ParaCategory)}
                         />

@@ -1,6 +1,6 @@
 import type { ComponentType } from 'react';
 
-export type UserRole = 'admin' | 'editor' | 'viewer';
+export type UserRole = 'admin' | 'editor' | 'viewer' | 'sales';
 
 export interface Profile {
     id: string;
@@ -100,7 +100,7 @@ export interface Approval {
     created_at: string;
 }
 
-export type ParaCategory = 'projects' | 'areas' | 'resources' | 'archive';
+export type ParaCategory = 'projects' | 'areas' | 'resources' | 'archive' | 'wiki';
 
 export interface SOP {
     id: string;
@@ -123,6 +123,7 @@ export interface PipelineDeal {
     stage: 'lead' | 'proposal' | 'negotiation' | 'closed_won' | 'closed_lost';
     probability: number;
     notes?: string;
+    created_at?: string;
 }
 
 export interface ClientFile {

@@ -15,6 +15,8 @@ const Settings = lazy(() => import('@/pages/Settings').then((m) => ({ default: m
 const Approvals = lazy(() => import('@/pages/Approvals').then((m) => ({ default: m.Approvals })));
 const Meetings = lazy(() => import('@/pages/Meetings').then((m) => ({ default: m.Meetings })));
 const Reports = lazy(() => import('@/pages/Reports').then((m) => ({ default: m.Reports })));
+const Pipeline = lazy(() => import('@/pages/Pipeline').then((m) => ({ default: m.Pipeline })));
+const AdminUsers = lazy(() => import('@/pages/AdminUsers').then((m) => ({ default: m.AdminUsers })));
 
 function LoadingFallback() {
   return (
@@ -46,6 +48,8 @@ function App() {
                 <Route path="approvals" element={<Approvals />} />
                 <Route path="meetings" element={<Meetings />} />
                 <Route path="reports" element={<Reports />} />
+                <Route path="pipeline" element={<Pipeline />} />
+                <Route path="team" element={<AdminUsers />} />
                 <Route path="portal" element={<ClientPortal />} />
                 <Route path="settings" element={<Settings />} />
               </Route>

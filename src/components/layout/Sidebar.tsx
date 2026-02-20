@@ -11,6 +11,7 @@ import {
     CheckSquare,
     Calendar,
     BarChart3,
+    Target,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Link, useLocation } from 'react-router-dom';
@@ -19,13 +20,15 @@ import { useState } from 'react';
 import type { NavItem } from '@/types';
 
 const mainNavItems: NavItem[] = [
-    { icon: LayoutDashboard, label: 'Dashboard', href: '/', roles: ['admin', 'editor'] },
+    { icon: LayoutDashboard, label: 'Dashboard', href: '/', roles: ['admin', 'editor', 'sales'] },
+    { icon: Target, label: 'Pipeline', href: '/pipeline', roles: ['admin', 'sales'] },
+    { icon: Users, label: 'Equipe', href: '/team', roles: ['admin'] },
     { icon: Zap, label: 'Operações', href: '/operations', roles: ['admin', 'editor'] },
     { icon: CheckSquare, label: 'Aprovações', href: '/approvals', roles: ['admin', 'editor'] },
     { icon: Calendar, label: 'Reuniões EOS', href: '/meetings', roles: ['admin', 'editor'] },
-    { icon: BarChart3, label: 'Relatórios', href: '/reports', roles: ['admin', 'editor'] },
-    { icon: BookOpen, label: 'Processos', href: '/processes', roles: ['admin', 'editor'] },
-    { icon: Users, label: 'Clientes', href: '/clients', roles: ['admin', 'editor'] },
+    { icon: BarChart3, label: 'Relatórios', href: '/reports', roles: ['admin'] },
+    { icon: BookOpen, label: 'Processos', href: '/processes', roles: ['admin', 'editor', 'sales'] },
+    { icon: Users, label: 'Clientes', href: '/clients', roles: ['admin', 'editor', 'sales'] },
 ];
 
 const viewerNavItems: NavItem[] = [

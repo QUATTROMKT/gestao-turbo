@@ -7,6 +7,7 @@ import {
     BarChart3,
     TrendingUp,
     Eye,
+    FolderOpen,
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, Badge, Progress, EmptyState } from '@/components/ui';
 import { cn, formatCurrency, formatNumber } from '@/lib/utils';
@@ -27,14 +28,18 @@ export function ClientPortal() {
         else setLoading(false);
     }, [clientId]);
 
+    const [client, setClient] = useState<any>(null);
+
     const loadData = async () => {
         try {
-            const [tasksRes, filesRes] = await Promise.all([
+            const [tasksRes, filesRes, clientRes] = await Promise.all([
                 supabase.from('tasks').select('*').eq('client_id', clientId!).order('updated_at', { ascending: false }),
                 supabase.from('client_files').select('*').eq('client_id', clientId!).order('created_at', { ascending: false }),
+                supabase.from('clients').select('drive_link').eq('id', clientId!).single()
             ]);
             if (tasksRes.data) setTasks(tasksRes.data as unknown as Task[]);
             if (filesRes.data) setFiles(filesRes.data as unknown as ClientFile[]);
+            if (clientRes.data) setClient(clientRes.data);
         } catch (err) {
             console.error('Error loading portal data:', err);
         } finally {
@@ -157,18 +162,41 @@ export function ClientPortal() {
                 </CardContent>
             </Card>
 
-            {/* Files */}
+            {/* Google Drive Embed */}
+            {client?.drive_link && (
+                <Card glass className="overflow-hidden">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <FolderOpen className="h-4 w-4 text-primary" />
+                            Pasta do Projeto (Google Drive)
+                        </CardTitle>
+                    </CardHeader>
+                    <div className="aspect-video w-full h-[500px]">
+                        <iframe
+                            src={client.drive_link.includes('embeddedfolderview')
+                                ? client.drive_link
+                                : client.drive_link.includes('/folders/')
+                                    ? `https://drive.google.com/embeddedfolderview?id=${client.drive_link.split('/folders/')[1]?.split('?')[0]}#list`
+                                    : client.drive_link}
+                            className="w-full h-full border-0"
+                            title="Google Drive Folder"
+                        />
+                    </div>
+                </Card>
+            )}
+
+            {/* Files List (Fallback or Additional) */}
             <Card glass>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                         <FileText className="h-4 w-4 text-primary" />
-                        Arquivos do Projeto
+                        Arquivos Recentes
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
                     {files.length === 0 ? (
                         <p className="text-sm text-muted-foreground py-4 text-center">
-                            Nenhum arquivo disponível ainda.
+                            Nenhum arquivo enviado diretamente. Verifique a pasta do Drive acima.
                         </p>
                     ) : (
                         <div className="space-y-2">
