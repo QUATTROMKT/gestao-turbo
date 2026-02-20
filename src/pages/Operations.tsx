@@ -56,10 +56,14 @@ export function Operations() {
     const [newDescription, setNewDescription] = useState('');
     const [newPriority, setNewPriority] = useState<TaskPriority>('medium');
     const [newClientId, setNewClientId] = useState('');
+    const [newAssigneeId, setNewAssigneeId] = useState('');
     const [newDueDate, setNewDueDate] = useState('');
+
+    const [users, setUsers] = useState<{ id: string; full_name: string }[]>([]);
 
     useEffect(() => {
         loadData();
+        loadUsers();
         // Subscribe to real-time changes
         const channel = supabase
             .channel('tasks-changes')
@@ -76,7 +80,7 @@ export function Operations() {
     const loadData = async () => {
         try {
             const [tasksRes, clientsRes] = await Promise.all([
-                supabase.from('tasks').select('*').order('order_index', { ascending: true }),
+                supabase.from('tasks').select('*, assignee:profiles(full_name)').order('order_index', { ascending: true }),
                 supabase.from('clients').select('*'),
             ]);
             if (tasksRes.data) setTasks(tasksRes.data as unknown as Task[]);
@@ -88,6 +92,11 @@ export function Operations() {
         }
     };
 
+    const loadUsers = async () => {
+        const { data } = await supabase.from('profiles').select('id, full_name');
+        if (data) setUsers(data);
+    };
+
     const createTask = async () => {
         if (!newTitle.trim()) return;
 
@@ -97,7 +106,7 @@ export function Operations() {
             priority: newPriority,
             status: 'todo' as TaskStatus,
             client_id: newClientId || null,
-            assignee_id: null,
+            assignee_id: newAssigneeId || null,
             due_date: newDueDate || null,
             tags: [],
             order_index: tasks.filter((t) => t.status === 'todo').length,
@@ -129,6 +138,7 @@ export function Operations() {
         setNewDescription('');
         setNewPriority('medium');
         setNewClientId('');
+        setNewAssigneeId('');
         setNewDueDate('');
     };
 
@@ -325,13 +335,25 @@ export function Operations() {
                             onChange={(e) => setNewClientId(e.target.value)}
                         />
                     </div>
-                    <Input
-                        id="task-due-date"
-                        label="Data Limite"
-                        type="date"
-                        value={newDueDate}
-                        onChange={(e) => setNewDueDate(e.target.value)}
-                    />
+                    <div className="grid grid-cols-2 gap-3">
+                        <Select
+                            id="task-assignee"
+                            label="Responsável"
+                            options={[
+                                { value: '', label: 'Sem responsável' },
+                                ...users.map((u) => ({ value: u.id, label: u.full_name })),
+                            ]}
+                            value={newAssigneeId}
+                            onChange={(e) => setNewAssigneeId(e.target.value)}
+                        />
+                        <Input
+                            id="task-due-date"
+                            label="Data Limite"
+                            type="date"
+                            value={newDueDate}
+                            onChange={(e) => setNewDueDate(e.target.value)}
+                        />
+                    </div>
                     <div className="flex justify-end gap-2 pt-2">
                         <Button
                             variant="ghost"

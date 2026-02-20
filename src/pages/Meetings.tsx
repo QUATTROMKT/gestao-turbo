@@ -75,14 +75,43 @@ export function Meetings() {
     };
 
     const loadMeetingData = async (meetingId: string) => {
-        // Load mock data for now or fetch from specific tables
-        // In a real app, we would fetch existing issues/headlines/todos linked to this meeting or general ones
-        fetchIssues(meetingId);
+        try {
+            await Promise.all([
+                fetchHeadlines(meetingId),
+                fetchIssues(meetingId),
+                fetchTodos(meetingId),
+                fetchRocks(),
+                fetchScorecard()
+            ]);
+        } catch (error) {
+            console.error('Error loading meeting data:', error);
+        }
     };
 
     const fetchIssues = async (meetingId: string) => {
-        const { data } = await supabase.from('meeting_issues').select('*').eq('meeting_id', meetingId);
+        const { data } = await supabase.from('meeting_issues').select('*').eq('meeting_id', meetingId).order('created_at', { ascending: true });
         if (data) setIssues(data as unknown as MeetingIssue[]);
+    };
+
+    const fetchHeadlines = async (meetingId: string) => {
+        const { data } = await supabase.from('meeting_headlines').select('*').eq('meeting_id', meetingId);
+        if (data) setHeadlines(data as unknown as MeetingHeadline[]);
+    };
+
+    const fetchTodos = async (meetingId: string) => {
+        const { data } = await supabase.from('meeting_todos').select('*').eq('meeting_id', meetingId);
+        if (data) setTodos(data as unknown as MeetingTodo[]);
+    };
+
+    const fetchRocks = async () => {
+        // Fetch rocks relevant to the team (all for now)
+        const { data } = await supabase.from('rocks').select('*');
+        if (data) setRocks(data as unknown as Rock[]);
+    };
+
+    const fetchScorecard = async () => {
+        const { data } = await supabase.from('scorecard_metrics').select('*');
+        if (data) setMetrics(data as unknown as ScorecardMetric[]);
     };
 
     const addIssue = async () => {
@@ -110,12 +139,118 @@ export function Meetings() {
         switch (AGENDA_STEPS[currentStep].id) {
             case 'segue':
                 return (
-                    <div className="text-center py-10 space-y-4">
+                    <div className="text-center py-10 space-y-6">
                         <h2 className="text-2xl font-bold">Good News (Segue)</h2>
                         <p className="text-muted-foreground">Compartilhe uma vitória pessoal e uma profissional da semana.</p>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
-                            <Card className="p-4 border-dashed">Profissional</Card>
-                            <Card className="p-4 border-dashed">Pessoal</Card>
+                            <Card className="p-6 border-dashed hover:border-primary/50 transition-colors">
+                                <h3 className="font-semibold mb-2">Profissional</h3>
+                                <Textarea placeholder="Qual foi a melhor coisa que aconteceu no trabalho?" className="min-h-[100px] bg-transparent" />
+                            </Card>
+                            <Card className="p-6 border-dashed hover:border-primary/50 transition-colors">
+                                <h3 className="font-semibold mb-2">Pessoal</h3>
+                                <Textarea placeholder="E na sua vida pessoal?" className="min-h-[100px] bg-transparent" />
+                            </Card>
+                        </div>
+                    </div>
+                );
+            case 'scorecard':
+                return (
+                    <div className="space-y-4">
+                        <h2 className="text-xl font-bold">Scorecard Review</h2>
+                        <div className="rounded-xl border border-border overflow-hidden">
+                            <table className="w-full text-sm">
+                                <thead className="bg-accent/50">
+                                    <tr>
+                                        <th className="p-3 text-left">Métrica</th>
+                                        <th className="p-3 text-right">Meta</th>
+                                        <th className="p-3 text-right">Atual</th>
+                                        <th className="p-3 text-center">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {metrics.map(metric => (
+                                        <tr key={metric.id} className="border-t border-border/50">
+                                            <td className="p-3 font-medium">{metric.name}</td>
+                                            <td className="p-3 text-right text-muted-foreground">{metric.target} {metric.unit}</td>
+                                            <td className="p-3 text-right font-bold">{metric.actual}</td>
+                                            <td className="p-3 text-center">
+                                                <Badge variant={metric.on_track ? 'success' : 'destructive'} className="uppercase text-[10px]">
+                                                    {metric.on_track ? 'On Track' : 'Off Track'}
+                                                </Badge>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {metrics.length === 0 && (
+                                        <tr>
+                                            <td colSpan={4} className="p-8 text-center text-muted-foreground">Nenhuma métrica cadastrada.</td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                );
+            case 'rock_review':
+                return (
+                    <div className="space-y-4">
+                        <h2 className="text-xl font-bold">Rock Review</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {rocks.map(rock => (
+                                <Card key={rock.id} className="p-4 flex flex-col gap-2">
+                                    <div className="flex justify-between items-start">
+                                        <span className="font-semibold">{rock.title}</span>
+                                        <Badge variant={rock.status === 'on_track' ? 'success' : rock.status === 'done' ? 'default' : 'destructive'}>
+                                            {rock.status === 'on_track' ? 'On Track' : rock.status === 'done' ? 'Done' : 'Off Track'}
+                                        </Badge>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground line-clamp-2">{rock.description}</p>
+                                    <div className="mt-auto pt-2">
+                                        <Progress value={rock.progress} className="h-2" />
+                                    </div>
+                                </Card>
+                            ))}
+                            {rocks.length === 0 && (
+                                <div className="col-span-full text-center py-8 text-muted-foreground border border-dashed rounded-xl">
+                                    Nenhum Rock definido para este trimestre.
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                );
+            case 'headlines':
+                return (
+                    <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                            <h2 className="text-xl font-bold">Headlines (Customer/Employee)</h2>
+                            <Button size="sm" variant="outline"><Plus className="h-4 w-4 mr-2" /> Adicionar</Button>
+                        </div>
+                        <div className="space-y-2">
+                            {headlines.map(headline => (
+                                <div key={headline.id} className="flex items-center gap-3 p-3 bg-accent/20 rounded-xl">
+                                    <MessageSquare className="h-4 w-4 text-primary" />
+                                    <span className="flex-1 font-medium">{headline.title}</span>
+                                    <Badge variant="outline" className="capitalize">{headline.type}</Badge>
+                                </div>
+                            ))}
+                            {headlines.length === 0 && <p className="text-muted-foreground text-center py-4">Nenhuma headline registrada.</p>}
+                        </div>
+                    </div>
+                );
+            case 'todo_list':
+                return (
+                    <div className="space-y-4">
+                        <h2 className="text-xl font-bold">To-Do List (Review)</h2>
+                        <div className="space-y-2">
+                            {todos.map(todo => (
+                                <div key={todo.id} className="flex items-center gap-3 p-3 border border-border rounded-xl">
+                                    <div className={`h-5 w-5 rounded-full border flex items-center justify-center cursor-pointer ${todo.completed ? 'bg-primary border-primary' : 'border-muted-foreground'}`}>
+                                        {todo.completed && <Check className="h-3 w-3 text-primary-foreground" />}
+                                    </div>
+                                    <span className={cn("flex-1", todo.completed && "line-through text-muted-foreground")}>{todo.title}</span>
+                                </div>
+                            ))}
+                            {todos.length === 0 && <p className="text-muted-foreground text-center py-4">Nenhum to-do pendente.</p>}
                         </div>
                     </div>
                 );
@@ -124,7 +259,7 @@ export function Meetings() {
                     <div className="space-y-4">
                         <div className="flex justify-between items-center">
                             <h2 className="text-xl font-bold">IDS: Identify, Discuss, Solve</h2>
-                            <Button size="sm" onClick={() => setShowIssueDialog(true)}><Plus className="h-4 w-4" /> New Issue</Button>
+                            <Button size="sm" onClick={() => setShowIssueDialog(true)}><Plus className="h-4 w-4 mr-1" /> New Issue</Button>
                         </div>
                         <div className="space-y-2">
                             {issues.map(issue => (
@@ -138,11 +273,26 @@ export function Meetings() {
                         </div>
                     </div>
                 );
+            case 'conclusion':
+                return (
+                    <div className="text-center py-10 space-y-6">
+                        <h2 className="text-2xl font-bold">Conclusão</h2>
+                        <p className="text-muted-foreground">Classifique a reunião de 1 a 10.</p>
+                        <div className="flex justify-center gap-2">
+                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(rating => (
+                                <Button key={rating} variant="outline" className="h-10 w-10 p-0 rounded-full">{rating}</Button>
+                            ))}
+                        </div>
+                        <Button size="lg" className="mt-8" onClick={() => setActiveMeeting(null)}>
+                            Encerrar Reunião
+                        </Button>
+                    </div>
+                );
             default:
                 return (
                     <div className="flex flex-col items-center justify-center py-20 text-muted-foreground opacity-50">
                         <Clock className="h-10 w-10 mb-2" />
-                        <p>Seção em desenvolvimento: {AGENDA_STEPS[currentStep].label}</p>
+                        <p>Seção não encontrada.</p>
                     </div>
                 );
         }
