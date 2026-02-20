@@ -1,7 +1,6 @@
--- 1. Add Department and Dates to Rocks
-ALTER TABLE rocks ADD COLUMN IF NOT EXISTS department text DEFAULT 'Company';
-ALTER TABLE rocks ADD COLUMN IF NOT EXISTS start_date date;
-ALTER TABLE rocks ADD COLUMN IF NOT EXISTS end_date date;
+-- 1. Add Department and Quarter to Rocks
+ALTER TABLE rocks ADD COLUMN IF NOT EXISTS department text DEFAULT 'Geral';
+ALTER TABLE rocks ADD COLUMN IF NOT EXISTS quarter text;
 
 -- 2. Ensure RLS is behaving
 ALTER TABLE rocks ENABLE ROW LEVEL SECURITY;

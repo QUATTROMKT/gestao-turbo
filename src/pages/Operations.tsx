@@ -195,12 +195,23 @@ export function Operations() {
             resetForm();
         }
     };
-    const handleDragStart = (taskId: string) => setDragTask(taskId);
-    const handleDragOver = (e: React.DragEvent) => e.preventDefault();
-    const handleDrop = (status: TaskStatus) => {
-        if (dragTask) {
-            updateTaskStatus(dragTask, status);
-            setDragTask(null);
+    const handleDragStart = (e: React.DragEvent, taskId: string) => {
+        setDragTask(taskId);
+        e.dataTransfer.setData('text/plain', taskId);
+        e.dataTransfer.effectAllowed = 'move';
+    };
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+    };
+
+    const handleDrop = (e: React.DragEvent, status: TaskStatus) => {
+        e.preventDefault();
+        const taskId = e.dataTransfer.getData('text/plain');
+        if (taskId) {
+            updateTaskStatus(taskId, status);
+            setDragTask(null); // Cleanup
         }
     };
 
@@ -256,7 +267,7 @@ export function Operations() {
                                 col.color
                             )}
                             onDragOver={handleDragOver}
-                            onDrop={() => handleDrop(col.id)}
+                            onDrop={(e) => handleDrop(e, col.id)}
                         >
                             {/* Column Header */}
                             <div className="flex items-center justify-between mb-3 px-1">
@@ -275,7 +286,7 @@ export function Operations() {
                                     <div
                                         key={task.id}
                                         draggable
-                                        onDragStart={() => handleDragStart(task.id)}
+                                        onDragStart={(e) => handleDragStart(e, task.id)}
                                         className={cn(
                                             'group cursor-grab rounded-xl border border-border/50 bg-card p-3 shadow-sm transition-all duration-200 hover:shadow-md hover:border-border active:cursor-grabbing',
                                             dragTask === task.id && 'opacity-50'
