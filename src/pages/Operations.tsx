@@ -138,7 +138,63 @@ export function Operations() {
     const getTasksByStatus = (status: TaskStatus) =>
         filteredTasks.filter((t) => t.status === status);
 
-    // Simple drag and drop using HTML5 API
+    const updateTaskStatus = async (taskId: string, status: TaskStatus) => {
+        // Optimistic update
+        setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status } : t));
+
+        const { error } = await supabase.from('tasks').update({ status }).eq('id', taskId);
+        if (error) {
+            console.error('Error updating status:', error);
+            loadData(); // Revert on error
+        }
+    };
+
+    const deleteTask = async (taskId: string) => {
+        if (!confirm('Tem certeza que deseja excluir esta tarefa?')) return;
+
+        // Optimistic delete
+        setTasks(prev => prev.filter(t => t.id !== taskId));
+
+        const { error } = await supabase.from('tasks').delete().eq('id', taskId);
+        if (error) {
+            console.error('Error deleting task:', error);
+            loadData();
+        }
+    };
+
+    const resetForm = () => {
+        setNewTitle('');
+        setNewDescription('');
+        setNewPriority('medium');
+        setNewClientId('');
+        setNewAssigneeId('');
+        setNewDueDate('');
+    };
+
+    const createTask = async () => {
+        if (!newTitle.trim()) return;
+
+        const newTask: Partial<Task> = {
+            title: newTitle,
+            description: newDescription,
+            priority: newPriority,
+            status: 'todo',
+            client_id: newClientId || null,
+            assignee_id: newAssigneeId || null,
+            due_date: newDueDate || null,
+            order_index: 0
+        };
+
+        const { data, error } = await supabase.from('tasks').insert(newTask).select().single();
+
+        if (error) {
+            alert('Erro ao criar tarefa: ' + error.message);
+        } else if (data) {
+            setTasks(prev => [data as Task, ...prev]);
+            setShowNewTask(false);
+            resetForm();
+        }
+    };
     const handleDragStart = (taskId: string) => setDragTask(taskId);
     const handleDragOver = (e: React.DragEvent) => e.preventDefault();
     const handleDrop = (status: TaskStatus) => {
