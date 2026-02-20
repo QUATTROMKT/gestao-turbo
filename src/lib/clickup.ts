@@ -15,19 +15,37 @@ const MOCK_TASKS: ClickUpTask[] = [
 
 export const ClickUpService = {
     async saveCredentials(personalAccessToken: string) {
-        const { data, error } = await supabase
+        const { data: existing } = await supabase
             .from('integrations')
-            .upsert({
-                provider: 'clickup',
-                credentials: { token: personalAccessToken },
-                status: 'active',
-                updated_at: new Date().toISOString()
-            }, { onConflict: 'provider' })
-            .select()
+            .select('id')
+            .eq('provider', 'clickup')
             .single();
 
-        if (error) throw error;
-        return data;
+        const payload = {
+            provider: 'clickup',
+            credentials: { token: personalAccessToken },
+            status: 'active',
+            updated_at: new Date().toISOString()
+        };
+
+        if (existing) {
+            const { data, error } = await supabase
+                .from('integrations')
+                .update(payload)
+                .eq('id', existing.id)
+                .select()
+                .single();
+            if (error) throw error;
+            return data;
+        } else {
+            const { data, error } = await supabase
+                .from('integrations')
+                .insert(payload)
+                .select()
+                .single();
+            if (error) throw error;
+            return data;
+        }
     },
 
     async getCredentials() {

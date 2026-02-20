@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Card, CardHeader, CardTitle, CardContent, Button, Badge } from '@/components/ui';
+import { Card, CardHeader, CardTitle, CardContent, Button, Badge, Dialog, Input, Select } from '@/components/ui';
 import { Plus, DollarSign, MoreHorizontal } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import type { PipelineDeal } from '@/types';
@@ -15,6 +15,13 @@ const STAGES = [
 export function Pipeline() {
     const [deals, setDeals] = useState<PipelineDeal[]>([]);
     const [loading, setLoading] = useState(true);
+
+    // New Deal State
+    const [isNewDealOpen, setIsNewDealOpen] = useState(false);
+    const [newCompanyName, setNewCompanyName] = useState('');
+    const [newContactName, setNewContactName] = useState('');
+    const [newValue, setNewValue] = useState('');
+    const [newEmail, setNewEmail] = useState('');
 
     useEffect(() => {
         fetchDeals();
@@ -36,6 +43,38 @@ export function Pipeline() {
         }
     };
 
+    const handleCreateDeal = async () => {
+        if (!newCompanyName || !newContactName) return;
+
+        try {
+            const { data, error } = await supabase.from('pipeline_deals').insert({
+                company_name: newCompanyName,
+                contact_name: newContactName,
+                email: newEmail,
+                value: parseFloat(newValue) || 0,
+                stage: 'lead',
+                probability: 20,
+            }).select();
+
+            if (error) throw error;
+
+            if (data) {
+                setDeals([data[0] as PipelineDeal, ...deals]);
+                setIsNewDealOpen(false);
+                resetForm();
+            }
+        } catch (err) {
+            console.error('Error creating deal:', err);
+        }
+    };
+
+    const resetForm = () => {
+        setNewCompanyName('');
+        setNewContactName('');
+        setNewValue('');
+        setNewEmail('');
+    };
+
     const getStageTotal = (stage: string) => {
         return deals
             .filter(d => d.stage === stage)
@@ -51,7 +90,7 @@ export function Pipeline() {
                         Gerencie suas oportunidades de negócio
                     </p>
                 </div>
-                <Button>
+                <Button onClick={() => setIsNewDealOpen(true)}>
                     <Plus className="h-4 w-4 mr-2" />
                     Novo Deal
                 </Button>
@@ -108,6 +147,18 @@ export function Pipeline() {
                     ))}
                 </div>
             </div>
+
+            <Dialog open={isNewDealOpen} onClose={() => setIsNewDealOpen(false)} title="Novo Deal">
+                <div className="space-y-4">
+                    <Input placeholder="Nome da Empresa *" value={newCompanyName} onChange={e => setNewCompanyName(e.target.value)} />
+                    <Input placeholder="Nome do Contato *" value={newContactName} onChange={e => setNewContactName(e.target.value)} />
+                    <Input placeholder="Email" value={newEmail} onChange={e => setNewEmail(e.target.value)} />
+                    <Input placeholder="Valor Estimado (R$)" type="number" value={newValue} onChange={e => setNewValue(e.target.value)} />
+                    <Button className="w-full" onClick={handleCreateDeal} disabled={!newCompanyName || !newContactName}>
+                        Criar Deal
+                    </Button>
+                </div>
+            </Dialog>
         </div>
     );
 }

@@ -31,20 +31,38 @@ const MOCK_INSIGHTS: MetaAdsInsights = {
 export const MetaService = {
     // Save credentials to Supabase
     async saveCredentials(accessToken: string, adAccountId: string) {
-        // Enforce RLS via Supabase (admin only)
-        const { data, error } = await supabase
+        // Safe check-then-update approach
+        const { data: existing } = await supabase
             .from('integrations')
-            .upsert({
-                provider: 'meta_ads',
-                credentials: { access_token: accessToken, ad_account_id: adAccountId },
-                status: 'active',
-                updated_at: new Date().toISOString()
-            }, { onConflict: 'provider' })
-            .select()
+            .select('id')
+            .eq('provider', 'meta_ads')
             .single();
 
-        if (error) throw error;
-        return data;
+        const payload = {
+            provider: 'meta_ads',
+            credentials: { access_token: accessToken, ad_account_id: adAccountId },
+            status: 'active',
+            updated_at: new Date().toISOString()
+        };
+
+        if (existing) {
+            const { data, error } = await supabase
+                .from('integrations')
+                .update(payload)
+                .eq('id', existing.id)
+                .select()
+                .single();
+            if (error) throw error;
+            return data;
+        } else {
+            const { data, error } = await supabase
+                .from('integrations')
+                .insert(payload)
+                .select()
+                .single();
+            if (error) throw error;
+            return data;
+        }
     },
 
     // Get credentials
