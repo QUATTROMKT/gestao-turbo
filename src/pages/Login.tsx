@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Button, Input } from '@/components/ui';
 import { Rocket, Eye, EyeOff } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 export function Login() {
     const { isAuthenticated, login, loading } = useAuth();
@@ -24,16 +25,35 @@ export function Login() {
         return <Navigate to="/" replace />;
     }
 
+    const [isSignUp, setIsSignUp] = useState(false);
+    const [fullName, setFullName] = useState('');
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
         setIsSubmitting(true);
 
-        const result = await login(email, password);
-        if (!result.success) {
-            setError(result.error || 'Credenciais inválidas');
+        try {
+            if (isSignUp) {
+                const { error } = await supabase.auth.signUp({
+                    email,
+                    password,
+                    options: { data: { full_name: fullName } },
+                });
+                if (error) throw error;
+                alert('Conta criada! Verifique seu email ou faça login.');
+                setIsSignUp(false);
+            } else {
+                const result = await login(email, password);
+                if (!result.success) {
+                    setError(result.error || 'Credenciais inválidas');
+                }
+            }
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setIsSubmitting(false);
         }
-        setIsSubmitting(false);
     };
 
     return (
@@ -52,9 +72,9 @@ export function Login() {
                     </div>
 
                     <div className="mb-6">
-                        <h2 className="text-xl font-semibold text-foreground">Bem-vindo de volta</h2>
+                        <h2 className="text-xl font-semibold text-foreground">{isSignUp ? 'Crie sua conta' : 'Bem-vindo de volta'}</h2>
                         <p className="text-sm text-muted-foreground mt-1">
-                            Faça login para acessar seu painel
+                            {isSignUp ? 'Preencha os dados abaixo' : 'Faça login para acessar seu painel'}
                         </p>
                     </div>
 
@@ -75,6 +95,18 @@ export function Login() {
                             required
                             autoComplete="email"
                         />
+
+                        {isSignUp && (
+                            <Input
+                                id="name"
+                                label="Nome Completo"
+                                type="text"
+                                placeholder="Seu Nome"
+                                value={fullName}
+                                onChange={(e) => setFullName(e.target.value)}
+                                required
+                            />
+                        )}
 
                         <div className="relative">
                             <Input
@@ -112,16 +144,23 @@ export function Login() {
                                     Entrando...
                                 </>
                             ) : (
-                                'Entrar'
+                                isSignUp ? 'Criar Conta' : 'Entrar'
                             )}
                         </Button>
                     </form>
 
-                    <p className="mt-8 text-center text-xs text-muted-foreground">
-                        Solicite acesso ao administrador do sistema
-                    </p>
+                    <div className="text-center mt-6">
+                        <button
+                            type="button"
+                            onClick={() => setIsSignUp(!isSignUp)}
+                            className="text-sm text-primary hover:underline"
+                        >
+                            {isSignUp ? 'Já tem conta? Faça login' : 'Não tem conta? Crie uma agora'}
+                        </button>
+                    </div>
                 </div>
             </div>
+            );
 
             {/* Right Panel — Decorative */}
             <div className="hidden lg:flex lg:flex-1 items-center justify-center gradient-primary relative overflow-hidden">

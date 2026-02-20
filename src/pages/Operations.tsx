@@ -2,20 +2,18 @@ import { useState, useEffect } from 'react';
 import {
     Plus,
     Search,
-    Filter,
     GripVertical,
-    MoreHorizontal,
     Clock,
     Calendar,
-    User,
     CheckCircle2,
     AlertCircle,
     Loader2,
     X,
 } from 'lucide-react';
-import { Card, Button, Input, Badge, Dialog, Textarea, Select, EmptyState } from '@/components/ui';
+import { Button, Input, Badge, Dialog, Textarea, Select } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
+import { ClickUpService } from '@/lib/clickup';
 import type { Task, TaskStatus, TaskPriority, Client } from '@/types';
 
 const COLUMNS: { id: TaskStatus; title: string; color: string; icon: typeof Clock }[] = [
@@ -58,6 +56,7 @@ export function Operations() {
     const [newClientId, setNewClientId] = useState('');
     const [newAssigneeId, setNewAssigneeId] = useState('');
     const [newDueDate, setNewDueDate] = useState('');
+    const [clickupTasks, setClickupTasks] = useState<Task[]>([]);
 
     const [users, setUsers] = useState<{ id: string; full_name: string }[]>([]);
 
@@ -79,12 +78,30 @@ export function Operations() {
 
     const loadData = async () => {
         try {
-            const [tasksRes, clientsRes] = await Promise.all([
+            const [tasksRes, clientsRes, clickupRes] = await Promise.all([
                 supabase.from('tasks').select('*, assignee:profiles(full_name)').order('order_index', { ascending: true }),
                 supabase.from('clients').select('*'),
+                ClickUpService.getTasks()
             ]);
+
             if (tasksRes.data) setTasks(tasksRes.data as unknown as Task[]);
             if (clientsRes.data) setClients(clientsRes.data as Client[]);
+
+            // Transform ClickUp tasks to our Task format
+            if (clickupRes) {
+                const mappedClickup = clickupRes.map((ct: any) => ({
+                    id: ct.id,
+                    title: `[ClickUp] ${ct.name}`,
+                    description: ct.description || '',
+                    status: mapClickUpStatus(ct.status?.status),
+                    priority: 'medium', // Default
+                    tags: ['clickup'],
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                    order_index: 999
+                }));
+                setClickupTasks(mappedClickup as unknown as Task[]);
+            }
         } catch (err) {
             console.error('Error loading tasks:', err);
         } finally {
@@ -92,62 +109,31 @@ export function Operations() {
         }
     };
 
+    const mapClickUpStatus = (s: string): TaskStatus => {
+        const lower = s?.toLowerCase() || '';
+        if (lower.includes('done') || lower.includes('complete')) return 'done';
+        if (lower.includes('progress')) return 'in_progress';
+        return 'todo';
+    };
+
     const loadUsers = async () => {
         const { data } = await supabase.from('profiles').select('id, full_name');
         if (data) setUsers(data);
     };
 
-    const createTask = async () => {
-        if (!newTitle.trim()) return;
+    // Combine tasks for display
+    const allTasks = [...tasks, ...clickupTasks];
 
-        const task = {
-            title: newTitle,
-            description: newDescription || null,
-            priority: newPriority,
-            status: 'todo' as TaskStatus,
-            client_id: newClientId || null,
-            assignee_id: newAssigneeId || null,
-            due_date: newDueDate || null,
-            tags: [],
-            order_index: tasks.filter((t) => t.status === 'todo').length,
-        };
-
-        const { error } = await supabase.from('tasks').insert(task);
-        if (!error) {
-            setShowNewTask(false);
-            resetForm();
-            loadData();
-        }
-    };
-
-    const updateTaskStatus = async (taskId: string, newStatus: TaskStatus) => {
-        const { error } = await supabase
-            .from('tasks')
-            .update({ status: newStatus, updated_at: new Date().toISOString() })
-            .eq('id', taskId);
-        if (!error) loadData();
-    };
-
-    const deleteTask = async (taskId: string) => {
-        const { error } = await supabase.from('tasks').delete().eq('id', taskId);
-        if (!error) loadData();
-    };
-
-    const resetForm = () => {
-        setNewTitle('');
-        setNewDescription('');
-        setNewPriority('medium');
-        setNewClientId('');
-        setNewAssigneeId('');
-        setNewDueDate('');
-    };
-
-    // Filter tasks
-    const filteredTasks = tasks.filter((t) => {
+    // Filter tasks (updated to use allTasks)
+    const filteredTasks = allTasks.filter((t) => {
         const matchesSearch = t.title.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesClient = !filterClient || t.client_id === filterClient;
         return matchesSearch && matchesClient;
     });
+
+
+
+
 
     const getTasksByStatus = (status: TaskStatus) =>
         filteredTasks.filter((t) => t.status === status);

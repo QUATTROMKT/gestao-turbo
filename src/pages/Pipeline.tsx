@@ -65,8 +65,9 @@ export function Pipeline() {
                 setIsNewDealOpen(false);
                 resetForm();
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error('Error creating deal:', err);
+            alert(`Erro ao criar deal: ${err.message || 'Erro desconhecido'}`);
         }
     };
 

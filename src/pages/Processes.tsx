@@ -162,6 +162,37 @@ export function Processes() {
         count: tab.id === 'wiki' ? (wikiUrl ? 1 : 0) : sops.filter((s) => s.category === tab.id).length,
     }));
 
+    const [driveUrl, setDriveUrl] = useState<string | null>(null);
+    const [showDriveConfig, setShowDriveConfig] = useState(false);
+    const [newDriveUrl, setNewDriveUrl] = useState('');
+
+    useEffect(() => {
+        loadSops();
+        loadWikiConfig();
+        loadDriveConfig();
+    }, []);
+
+    const loadDriveConfig = async () => {
+        const { data } = await supabase.from('integrations').select('*').eq('provider', 'google_drive').single();
+        if (data?.credentials?.url) {
+            setDriveUrl(data.credentials.url);
+        }
+    };
+
+    const saveDriveConfig = async () => {
+        if (!newDriveUrl) return;
+        const { error } = await supabase.from('integrations').upsert({
+            provider: 'google_drive',
+            credentials: { url: newDriveUrl },
+            status: 'active'
+        }, { onConflict: 'provider' });
+
+        if (!error) {
+            setDriveUrl(newDriveUrl);
+            setShowDriveConfig(false);
+        }
+    };
+
     return (
         <div className="space-y-6 animate-fade-in">
             {/* Header */}
@@ -169,7 +200,7 @@ export function Processes() {
                 <div>
                     <h1 className="text-2xl font-bold text-foreground">Biblioteca de Processos</h1>
                     <p className="text-sm text-muted-foreground mt-1">
-                        Cérebro da agência — Método PARA + Wiki
+                        Cérebro da agência — Método PARA + Wiki + Drive
                     </p>
                 </div>
                 <div className="flex gap-2">
@@ -179,22 +210,30 @@ export function Processes() {
                             Configurar Notion
                         </Button>
                     )}
-                    <Button onClick={() => { resetForm(); setEditingSop(null); setShowEditor(true); }}>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Novo Manual
-                    </Button>
+                    {activeTab === 'drive' && (
+                        <Button variant="outline" onClick={() => setShowDriveConfig(true)}>
+                            <Settings className="h-4 w-4 mr-2" />
+                            Configurar Drive
+                        </Button>
+                    )}
+                    {(activeTab !== 'wiki' && activeTab !== 'drive') && (
+                        <Button onClick={() => { resetForm(); setEditingSop(null); setShowEditor(true); }}>
+                            <Plus className="h-4 w-4 mr-2" />
+                            Novo Manual
+                        </Button>
+                    )}
                 </div>
             </div>
 
             {/* PARA Tabs */}
             <Tabs
-                tabs={tabsWithCount}
+                tabs={[...tabsWithCount, { id: 'drive', label: 'Google Drive', count: driveUrl ? 1 : 0 }]}
                 active={activeTab}
                 onChange={(id) => setActiveTab(id as ParaCategory)}
             />
 
             {/* Search (only for SOPs) */}
-            {activeTab !== 'wiki' && (
+            {(activeTab !== 'wiki' && activeTab !== 'drive') && (
                 <div className="relative">
                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <input
@@ -216,6 +255,7 @@ export function Processes() {
                     })()}
                     <span className="text-sm font-semibold text-foreground">
                         {PARA_TABS.find((t) => t.id === activeTab)?.label}
+                        {activeTab === 'drive' && 'Google Drive'}
                     </span>
                 </div>
                 <p className="text-xs text-muted-foreground">
@@ -224,6 +264,7 @@ export function Processes() {
                     {activeTab === 'resources' && 'Materiais de referência e templates reutilizáveis. Ex: "Templates de copy", "Checklist de auditoria".'}
                     {activeTab === 'archive' && 'Processos inativos mantidos para consulta futura.'}
                     {activeTab === 'wiki' && 'Central de conhecimento da empresa (Notion).'}
+                    {activeTab === 'drive' && 'Acesso direto aos arquivos do Google Drive.'}
                 </p>
             </div>
 
@@ -246,6 +287,29 @@ export function Processes() {
                                 <Button onClick={() => setShowWikiConfig(true)}>
                                     <Settings className="h-4 w-4 mr-2" />
                                     Configurar URL do Notion
+                                </Button>
+                            }
+                        />
+                    )}
+                </div>
+            ) : activeTab === 'drive' ? (
+                // Drive View
+                <div className="h-[600px] w-full rounded-xl border border-border/50 bg-card overflow-hidden">
+                    {driveUrl ? (
+                        <iframe
+                            src={driveUrl}
+                            className="w-full h-full border-0"
+                            title="Google Drive"
+                        />
+                    ) : (
+                        <EmptyState
+                            icon={Folder}
+                            title="Drive não configurado"
+                            description="Conecte uma pasta pública do Google Drive para exibir seus arquivos aqui."
+                            action={
+                                <Button onClick={() => setShowDriveConfig(true)}>
+                                    <Settings className="h-4 w-4 mr-2" />
+                                    Configurar URL do Drive
                                 </Button>
                             }
                         />
@@ -356,6 +420,25 @@ export function Processes() {
                         onChange={e => setNewWikiUrl(e.target.value)}
                     />
                     <Button className="w-full" onClick={saveWikiConfig}>Salvar Integração</Button>
+                </div>
+            </Dialog>
+
+            {/* Drive Config Dialog */}
+            <Dialog
+                open={showDriveConfig}
+                onClose={() => setShowDriveConfig(false)}
+                title="Configurar Google Drive"
+            >
+                <div className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                        Insira a URL de incorporação da pasta do Google Drive.
+                    </p>
+                    <Input
+                        placeholder="https://drive.google.com/embedded/..."
+                        value={newDriveUrl}
+                        onChange={e => setNewDriveUrl(e.target.value)}
+                    />
+                    <Button className="w-full" onClick={saveDriveConfig}>Salvar Integração</Button>
                 </div>
             </Dialog>
 

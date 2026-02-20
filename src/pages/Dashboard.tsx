@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { DollarSign, Users, Target, TrendingUp, Megaphone, ExternalLink, Plus, Trash2 } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardContent, Button, Dialog, Input, Select, Progress } from '@/components/ui';
+import { Card, CardHeader, CardTitle, CardContent, Button, Dialog, Input, Select, Progress, Badge } from '@/components/ui';
 import { cn, formatCurrency, formatNumber } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
@@ -92,11 +92,26 @@ function AdminDashboard({ clients, tasks, rocks, deals, revenueData, leadsData, 
     const [openRock, setOpenRock] = useState(false);
     const [title, setTitle] = useState('');
     const [owner, setOwner] = useState('');
+    const [department, setDepartment] = useState('Geral');
+    const [quarter, setQuarter] = useState('Q1 2024');
 
     const saveRock = async () => {
         if (!title) return;
-        await supabase.from('rocks').insert({ title, owner_id: owner || null, quarter: 'Q1 2026', status: 'on_track', progress: 0 });
-        setOpenRock(false); setTitle(''); onRockChange();
+        const { error } = await supabase.from('rocks').insert({
+            title,
+            owner_id: owner || null,
+            quarter,
+            department,
+            status: 'on_track',
+            progress: 0
+        });
+        if (error) {
+            alert('Erro ao criar meta: ' + error.message);
+        } else {
+            setOpenRock(false);
+            setTitle('');
+            onRockChange();
+        }
     };
 
     const delRock = async (id: string) => {
@@ -145,7 +160,22 @@ function AdminDashboard({ clients, tasks, rocks, deals, revenueData, leadsData, 
                     <CardHeader><CardTitle>Metas (Rocks)</CardTitle></CardHeader>
                     <CardContent className="space-y-4">
                         {rocks.map((r: any) => (
-                            <div key={r.id} className="flex justify-between items-center p-3 bg-accent/30 rounded"><div className="flex-1"><div className="flex justify-between mb-1 text-sm font-medium"><span>{r.title}</span><span>{r.status}</span></div><Progress value={r.progress} className="h-2" /></div><Button variant="ghost" className="ml-2 text-destructive" onClick={() => delRock(r.id)}><Trash2 className="h-4 w-4" /></Button></div>
+                            <div key={r.id} className="flex justify-between items-center p-3 bg-accent/30 rounded">
+                                <div className="flex-1">
+                                    <div className="flex justify-between mb-1 text-sm font-medium">
+                                        <div className="flex items-center gap-2">
+                                            <span>{r.title}</span>
+                                            {r.department && <Badge variant="outline" className="text-[10px]">{r.department}</Badge>}
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            {r.quarter && <span className="text-[10px] text-muted-foreground">{r.quarter}</span>}
+                                            <span className={cn("text-xs px-1.5 py-0.5 rounded", r.status === 'on_track' ? 'bg-emerald-500/20 text-emerald-500' : 'bg-red-500/20 text-red-500')}>{r.status === 'on_track' ? 'On Track' : 'Off Track'}</span>
+                                        </div>
+                                    </div>
+                                    <Progress value={r.progress} className="h-2" />
+                                </div>
+                                <Button variant="ghost" className="ml-2 text-destructive" onClick={() => delRock(r.id)}><Trash2 className="h-4 w-4" /></Button>
+                            </div>
                         ))}
                         <Button variant="outline" size="sm" className="w-full mt-2" onClick={() => setOpenRock(true)}><Plus className="h-4 w-4 mr-1" /> Nova Meta</Button>
                     </CardContent>
@@ -154,10 +184,13 @@ function AdminDashboard({ clients, tasks, rocks, deals, revenueData, leadsData, 
                 <Card glass>
                     <CardHeader><CardTitle>Tarefas ClickUp</CardTitle></CardHeader>
                     <CardContent className="space-y-2">
-                        {/* We need clickupTasks prop here. AdminDashboard needs to receive it */}
-                        <div className="p-4 text-center text-muted-foreground border border-dashed rounded-lg">
-                            Visualização de tarefas do ClickUp integrada.
-                        </div>
+                        {clickupTasks.slice(0, 5).map((t: any) => (
+                            <div key={t.id} className="p-2 bg-accent/20 rounded flex justify-between items-center text-sm">
+                                <span>{t.name}</span>
+                                <Badge variant="outline">{t.status?.status}</Badge>
+                            </div>
+                        ))}
+                        {!clickupTasks.length && <p className="text-muted-foreground text-sm text-center py-4">Nenhuma tarefa do ClickUp</p>}
                     </CardContent>
                 </Card>
             </div>
@@ -165,6 +198,10 @@ function AdminDashboard({ clients, tasks, rocks, deals, revenueData, leadsData, 
             <Dialog open={openRock} onClose={() => setOpenRock(false)} title="Nova Meta">
                 <div className="space-y-4">
                     <Input placeholder="Título" value={title} onChange={e => setTitle(e.target.value)} />
+                    <div className="grid grid-cols-2 gap-4">
+                        <Select label="Trimestre" options={[{ value: 'Q1 2024', label: 'Q1 2024' }, { value: 'Q2 2024', label: 'Q2 2024' }, { value: 'Q3 2024', label: 'Q3 2024' }, { value: 'Q4 2024', label: 'Q4 2024' }]} value={quarter} onChange={e => setQuarter(e.target.value)} />
+                        <Select label="Departamento" options={[{ value: 'Geral', label: 'Geral' }, { value: 'Vendas', label: 'Vendas' }, { value: 'Marketing', label: 'Marketing' }, { value: 'Operações', label: 'Operações' }]} value={department} onChange={e => setDepartment(e.target.value)} />
+                    </div>
                     <Select label="Dono" options={[{ value: '', label: 'Selecione' }, ...profiles.map((p: any) => ({ value: p.id, label: p.full_name }))]} value={owner} onChange={e => setOwner(e.target.value)} />
                     <Button className="w-full" onClick={saveRock}>Salvar</Button>
                 </div>

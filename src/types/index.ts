@@ -100,7 +100,7 @@ export interface Approval {
     created_at: string;
 }
 
-export type ParaCategory = 'projects' | 'areas' | 'resources' | 'archive' | 'wiki';
+export type ParaCategory = 'projects' | 'areas' | 'resources' | 'archive' | 'wiki' | 'drive';
 
 export interface SOP {
     id: string;
