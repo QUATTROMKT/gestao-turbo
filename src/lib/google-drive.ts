@@ -16,19 +16,37 @@ const MOCK_FILES: DriveFile[] = [
 
 export const GoogleDriveService = {
     async saveCredentials(clientId: string, clientSecret: string, apiKey: string) {
-        const { data, error } = await supabase
+        const { data: existing } = await supabase
             .from('integrations')
-            .upsert({
-                provider: 'google_drive',
-                credentials: { client_id: clientId, client_secret: clientSecret, api_key: apiKey },
-                status: 'active',
-                updated_at: new Date().toISOString()
-            }, { onConflict: 'provider' })
-            .select()
+            .select('id')
+            .eq('provider', 'google_drive')
             .single();
 
-        if (error) throw error;
-        return data;
+        const payload = {
+            provider: 'google_drive',
+            credentials: { client_id: clientId, client_secret: clientSecret, api_key: apiKey },
+            status: 'active',
+            updated_at: new Date().toISOString()
+        };
+
+        if (existing) {
+            const { data, error } = await supabase
+                .from('integrations')
+                .update(payload)
+                .eq('id', existing.id)
+                .select()
+                .single();
+            if (error) throw error;
+            return data;
+        } else {
+            const { data, error } = await supabase
+                .from('integrations')
+                .insert(payload)
+                .select()
+                .single();
+            if (error) throw error;
+            return data;
+        }
     },
 
     async getCredentials() {

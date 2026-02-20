@@ -14,19 +14,37 @@ const MOCK_PAGES: NotionPage[] = [
 
 export const NotionService = {
     async saveCredentials(integrationToken: string) {
-        const { data, error } = await supabase
+        const { data: existing } = await supabase
             .from('integrations')
-            .upsert({
-                provider: 'notion',
-                credentials: { token: integrationToken },
-                status: 'active',
-                updated_at: new Date().toISOString()
-            }, { onConflict: 'provider' })
-            .select()
+            .select('id')
+            .eq('provider', 'notion')
             .single();
 
-        if (error) throw error;
-        return data;
+        const payload = {
+            provider: 'notion',
+            credentials: { token: integrationToken },
+            status: 'active',
+            updated_at: new Date().toISOString()
+        };
+
+        if (existing) {
+            const { data, error } = await supabase
+                .from('integrations')
+                .update(payload)
+                .eq('id', existing.id)
+                .select()
+                .single();
+            if (error) throw error;
+            return data;
+        } else {
+            const { data, error } = await supabase
+                .from('integrations')
+                .insert(payload)
+                .select()
+                .single();
+            if (error) throw error;
+            return data;
+        }
     },
 
     async getCredentials() {
