@@ -78,10 +78,10 @@ export function Settings() {
         setSaving(provider);
         try {
             await saveFn();
-            // Show success toast (mocked via console for now)
-            console.log(`${provider} saved!`);
-        } catch (error) {
+            alert(`${provider} salvo com sucesso!`);
+        } catch (error: any) {
             console.error(error);
+            alert(`Erro ao salvar ${provider}: ${error.message || JSON.stringify(error)}`);
         } finally {
             setSaving(null);
         }
