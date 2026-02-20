@@ -179,9 +179,9 @@ export function Operations() {
             description: newDescription,
             priority: newPriority,
             status: 'todo',
-            client_id: newClientId || null,
-            assignee_id: newAssigneeId || null,
-            due_date: newDueDate || null,
+            client_id: newClientId || undefined,
+            assignee_id: newAssigneeId || undefined,
+            due_date: newDueDate || undefined,
             order_index: 0
         };
 
